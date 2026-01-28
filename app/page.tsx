@@ -71,9 +71,14 @@ export default function Home() {
         setNewSupervisorName('');
         setShowCreateForm(false);
         fetchProjects();
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Failed to create project:', errorData);
+        alert(`Failed to create project: ${errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Failed to create project:', error);
+      alert(`Failed to create project: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 

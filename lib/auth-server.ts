@@ -25,6 +25,11 @@ export async function clearAdminSession() {
 }
 
 export async function isAdminServer(): Promise<boolean> {
-  const cookieStore = await cookies();
-  return cookieStore.get(ADMIN_COOKIE_NAME)?.value === 'authenticated';
+  try {
+    const cookieStore = await cookies();
+    return cookieStore.get(ADMIN_COOKIE_NAME)?.value === 'authenticated';
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return false; // Fail securely - if we can't check, assume not admin
+  }
 }

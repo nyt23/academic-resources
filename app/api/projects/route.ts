@@ -27,7 +27,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch (error) {
+      console.error('Error parsing request body:', error);
+      return NextResponse.json(
+        { error: 'Invalid request body. Expected JSON.' },
+        { status: 400 }
+      );
+    }
+
     const { name, description, moduleName, supervisorName } = body;
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -47,8 +57,14 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating project:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error('Error stack:', errorStack);
     return NextResponse.json(
-      { error: 'Failed to create project', details: process.env.NODE_ENV === 'development' ? errorMessage : undefined },
+      { 
+        error: 'Failed to create project', 
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+        stack: process.env.NODE_ENV === 'development' ? errorStack : undefined
+      },
       { status: 500 }
     );
   }
