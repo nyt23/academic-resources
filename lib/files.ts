@@ -134,7 +134,11 @@ export async function saveFile(
 
   try {
     const blobPath = `${projectId}/${categoryId}/${filename}`;
-    const blob = await put(blobPath, buffer, {
+    // Convert Buffer to ArrayBuffer for Vercel Blob compatibility
+    // Create a new ArrayBuffer copy to ensure type compatibility
+    const arrayBuffer = new ArrayBuffer(buffer.length);
+    new Uint8Array(arrayBuffer).set(buffer);
+    const blob = await put(blobPath, arrayBuffer, {
       access: 'public',
       addRandomSuffix: false,
     });
