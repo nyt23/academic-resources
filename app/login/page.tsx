@@ -39,14 +39,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#121212] text-gray-900 dark:text-white flex items-center justify-center p-8 transition-all duration-300 ease-in-out">
+    <div className="min-h-screen bg-white dark:bg-[#121212] text-gray-900 dark:text-white flex items-center justify-center p-4 sm:p-6 md:p-8 transition-all duration-300 ease-in-out">
       <div className="w-full max-w-md relative">
         <div className="absolute top-0 right-0">
           <ThemeToggle />
         </div>
-        <div className="bg-gray-50 dark:bg-[#1E1E1E] p-8 rounded-lg border border-gray-200 dark:border-gray-800/30">
-          <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">Admin Login</h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">Enter your password to access admin features</p>
+        <div className="bg-gray-50 dark:bg-[#1E1E1E] p-6 sm:p-8 rounded-lg border border-gray-200 dark:border-gray-800/30">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-900 dark:text-white">Admin Login</h1>
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6">Enter your password to access admin features</p>
           
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
@@ -74,17 +74,17 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full px-4 py-2 bg-blue-200 dark:bg-blue-600/30 hover:bg-blue-300 dark:hover:bg-blue-600/50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-blue-800 dark:text-blue-400"
+              className="w-full px-4 py-2.5 sm:py-2 bg-blue-200 dark:bg-blue-600/30 hover:bg-blue-300 dark:hover:bg-blue-600/50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm sm:text-base font-medium transition-colors flex items-center justify-center gap-2 text-blue-800 dark:text-blue-400"
             >
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Logging in...
+                  <span>Logging in...</span>
                 </>
               ) : (
                 <>
                   <LogIn className="w-4 h-4" />
-                  Login
+                  <span>Login</span>
                 </>
               )}
             </button>
