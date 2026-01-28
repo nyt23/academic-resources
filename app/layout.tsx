@@ -5,6 +5,9 @@ import { ThemeProvider } from "@/lib/theme";
 export const metadata: Metadata = {
   title: "Academic Resources",
   description: "Store and organize your academic project materials",
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export const viewport: Viewport = {

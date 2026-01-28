@@ -9,8 +9,17 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching projects:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error('Full error stack:', errorStack);
+    // Always show error details to help diagnose issues
     return NextResponse.json(
-      { error: 'Failed to fetch projects', details: process.env.NODE_ENV === 'development' ? errorMessage : undefined },
+      { 
+        error: 'Failed to fetch projects', 
+        details: errorMessage,
+        hint: errorMessage.includes('Redis') || errorMessage.includes('KV') 
+          ? 'Please ensure Redis/KV is configured in your Vercel environment variables (KV_REST_API_URL/KV_REST_API_TOKEN or UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN)'
+          : undefined
+      },
       { status: 500 }
     );
   }

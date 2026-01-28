@@ -45,35 +45,77 @@ function getRedisConfig() {
 async function getAllProjectsFromKV(): Promise<Project[]> {
   // Use local storage if not on Vercel and Redis not configured
   if (!shouldUseRedis()) {
-    return getAllProjectsLocal();
+    try {
+      return getAllProjectsLocal();
+    } catch (error) {
+      console.error('Error reading projects from local storage:', error);
+      return [];
+    }
   }
   
   try {
     const redisConfig = getRedisConfig();
+    console.log('Redis config check:', {
+      hasKV_URL: !!process.env.KV_REST_API_URL,
+      hasKV_TOKEN: !!process.env.KV_REST_API_TOKEN,
+      hasUpstash_URL: !!process.env.UPSTASH_REDIS_REST_URL,
+      hasUpstash_TOKEN: !!process.env.UPSTASH_REDIS_REST_TOKEN,
+      usingConfig: redisConfig ? (process.env.KV_REST_API_URL ? 'Vercel KV' : 'Upstash Redis') : 'none'
+    });
+    
     if (!redisConfig) {
       if (isVercelPlatform()) {
-        throw new Error('Redis/KV configuration is required on Vercel. Please set either KV_REST_API_URL/KV_REST_API_TOKEN (for Vercel KV) or UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN (for Upstash Redis) in your Vercel environment variables.');
+        const missingVars = [];
+        if (!process.env.KV_REST_API_URL && !process.env.UPSTASH_REDIS_REST_URL) {
+          missingVars.push('KV_REST_API_URL or UPSTASH_REDIS_REST_URL');
+        }
+        if (!process.env.KV_REST_API_TOKEN && !process.env.UPSTASH_REDIS_REST_TOKEN) {
+          missingVars.push('KV_REST_API_TOKEN or UPSTASH_REDIS_REST_TOKEN');
+        }
+        throw new Error(
+          `Redis/KV configuration is required on Vercel but is missing. ` +
+          `Missing environment variables: ${missingVars.join(', ')}. ` +
+          `Please set either KV_REST_API_URL/KV_REST_API_TOKEN (for Vercel KV) or ` +
+          `UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN (for Upstash Redis) in your Vercel project settings.`
+        );
       }
       // Fallback to local storage if not on Vercel
-      return getAllProjectsLocal();
+      try {
+        return getAllProjectsLocal();
+      } catch (error) {
+        console.error('Error reading projects from local storage:', error);
+        return [];
+      }
     }
     
     const { Redis } = await import('@upstash/redis');
+    console.log('Connecting to Redis/KV with URL:', redisConfig.url?.substring(0, 30) + '...');
     const redis = new Redis({
       url: redisConfig.url,
       token: redisConfig.token,
     });
     const projects = await redis.get<Project[]>(PROJECTS_KEY);
+    console.log('Successfully fetched projects from Redis/KV, count:', projects?.length || 0);
     return projects || [];
   } catch (error) {
     console.error('Error reading projects from Redis:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     // On Vercel, we can't fallback to local storage
     if (isVercelPlatform()) {
+      // Provide a more helpful error message
+      if (errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('ECONNREFUSED')) {
+        throw new Error(`Failed to connect to Redis/KV. Please check your Redis/KV configuration in Vercel environment variables. Original error: ${errorMessage}`);
+      }
       throw error; // Re-throw so we can see the actual error
     }
     // Locally, fallback to local storage if Redis fails
     console.warn('Redis failed, falling back to local storage');
-    return getAllProjectsLocal();
+    try {
+      return getAllProjectsLocal();
+    } catch (localError) {
+      console.error('Error reading projects from local storage:', localError);
+      return [];
+    }
   }
 }
 
@@ -93,7 +135,19 @@ async function saveProjectsToKV(projects: Project[]): Promise<void> {
     const redisConfig = getRedisConfig();
     if (!redisConfig) {
       if (isVercelPlatform()) {
-        throw new Error('Redis/KV configuration is required on Vercel. Please set either KV_REST_API_URL/KV_REST_API_TOKEN (for Vercel KV) or UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN (for Upstash Redis) in your Vercel environment variables.');
+        const missingVars = [];
+        if (!process.env.KV_REST_API_URL && !process.env.UPSTASH_REDIS_REST_URL) {
+          missingVars.push('KV_REST_API_URL or UPSTASH_REDIS_REST_URL');
+        }
+        if (!process.env.KV_REST_API_TOKEN && !process.env.UPSTASH_REDIS_REST_TOKEN) {
+          missingVars.push('KV_REST_API_TOKEN or UPSTASH_REDIS_REST_TOKEN');
+        }
+        throw new Error(
+          `Redis/KV configuration is required on Vercel but is missing. ` +
+          `Missing environment variables: ${missingVars.join(', ')}. ` +
+          `Please set either KV_REST_API_URL/KV_REST_API_TOKEN (for Vercel KV) or ` +
+          `UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN (for Upstash Redis) in your Vercel project settings.`
+        );
       }
       // Fallback to local storage if not on Vercel
       saveProjectsLocal(projects);
@@ -108,8 +162,13 @@ async function saveProjectsToKV(projects: Project[]): Promise<void> {
     await redis.set(PROJECTS_KEY, projects);
   } catch (error) {
     console.error('Error saving projects to Redis:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     // On Vercel, we can't fallback to local storage
     if (isVercelPlatform()) {
+      // Provide a more helpful error message
+      if (errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('ECONNREFUSED')) {
+        throw new Error(`Failed to connect to Redis/KV. Please check your Redis/KV configuration in Vercel environment variables. Original error: ${errorMessage}`);
+      }
       throw error; // Re-throw so we can see the actual error
     }
     // Locally, fallback to local storage if Redis fails
@@ -136,11 +195,12 @@ function ensureDataDir() {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
     if (!fs.existsSync(PROJECTS_FILE)) {
-      fs.writeFileSync(PROJECTS_FILE, JSON.stringify([]));
+      fs.writeFileSync(PROJECTS_FILE, JSON.stringify([]), 'utf-8');
     }
   } catch (error) {
     console.error('Error ensuring data directory exists:', error);
-    throw error; // Re-throw to be caught by the calling function
+    // Don't throw - let the calling function handle it
+    // This allows getAllProjectsLocal to return [] on error
   }
 }
 
